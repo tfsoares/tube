@@ -1,0 +1,26 @@
+# Build output
+dist/
+
+# Dependencies
+engine/node_modules/
+engine/bun.lock
+
+# PerryTS cache and build outputs
+.perry/
+app/.perry-cache/
+app/dist/
+app/*.o
+app/main
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# State (generated at runtime)
+.tube/

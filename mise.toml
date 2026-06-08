@@ -1,0 +1,65 @@
+# Tube — mise tasks
+#
+# Install:  brew install mise     or    curl https://mise.jdx.dev/install.sh | sh
+# Run:      mise run <task>
+# List:     mise tasks
+
+[tools]
+bun = "latest"
+
+[tasks.engine]
+description = "Build the Bun-compiled proxy engine (CLI + daemon)"
+run = '''
+cd engine && bun install && bun build --compile \
+  --target=bun-darwin-arm64 \
+  ./src/index.ts \
+  --outfile=../dist/tube-engine && \
+ln -sf tube-engine ../dist/tube
+'''
+
+[tasks.app]
+description = "Build the PerryTS native UI app"
+run = "cd app && npx @perryts/perry compile src/main.ts"
+
+[tasks.bundle]
+description = "Package everything into a .app bundle"
+depends = ["engine", "app"]
+run = '''
+APP_NAME="Tube"
+BUNDLE_DIR="dist/${APP_NAME}.app"
+rm -rf "$BUNDLE_DIR"
+mkdir -p "$BUNDLE_DIR/Contents/MacOS" "$BUNDLE_DIR/Contents/Resources"
+cp app/main "$BUNDLE_DIR/Contents/MacOS/${APP_NAME}"
+cp dist/tube-engine "$BUNDLE_DIR/Contents/Resources/"
+sed -e "s/__APP_NAME__/${APP_NAME}/g" -e "s/__BUNDLE_ID__/dev.tube.app/g" \
+  app/src/Info.plist.in > "$BUNDLE_DIR/Contents/Info.plist"
+'''
+
+[tasks.all]
+description = "Build everything (engine + app + bundle)"
+depends = ["engine", "app", "bundle"]
+
+[tasks.install-cli]
+description = "Install tube CLI to ~/.local/bin"
+run = '''
+mkdir -p ~/.local/bin && \
+cp dist/tube ~/.local/bin/tube && \
+chmod +x ~/.local/bin/tube && \
+echo "Installed to ~/.local/bin/tube" && \
+echo "Add to PATH: export PATH=\"\$HOME/.local/bin:\$PATH\""
+'''
+
+[tasks.clean]
+description = "Remove build artifacts"
+run = "rm -rf dist app/main app/dist app/.perry-cache engine/dist engine/node_modules engine/bun.lock"
+
+[tasks.run]
+description = "Build and open the app"
+depends = ["bundle"]
+env = { TUBE_NO_TLS = "1" }
+run = "open dist/Tube.app"
+
+[tasks.dev-engine]
+description = "Run engine in development mode (no TLS)"
+env = { TUBE_NO_TLS = "1", TUBE_PORT = "8099", TUBE_API_PORT = "8100" }
+run = "cd engine && bun run src/index.ts"

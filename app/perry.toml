@@ -1,0 +1,11 @@
+[project]
+name = "Tube"
+entry = "src/main.ts"
+
+[build]
+out_dir = "dist"
+opt_level = 2
+
+[i18n]
+default_locale = "en"
+locales = ["en"]
