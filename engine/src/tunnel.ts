@@ -31,11 +31,11 @@ const tunnels = new Map<TunnelType, ActiveTunnel>();
 
 const URL_PATTERNS: Record<TunnelType, RegExp> = {
   ngrok: /https:\/\/[a-zA-Z0-9-]+\.ngrok-free\.app/,
-  tailscale: /https:\/\/[a-z0-9-]+(?:-[a-z0-9]+)*\.(?:ts\.net|tailscale\.net)/i,
+  tailscale: /https:\/\/[a-z0-9][a-z0-9.-]*\.(?:ts\.net|tailscale\.net)/i,
   funnel: /https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/,
 };
 
-function extractUrl(type: TunnelType, text: string): string | undefined {
+export function extractUrl(type: TunnelType, text: string): string | undefined {
   const m = text.match(URL_PATTERNS[type]);
   return m ? m[0] : undefined;
 }

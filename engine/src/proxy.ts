@@ -69,7 +69,7 @@ const MAX_PROXY_HOPS = 5;
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
-function getRequestHost(req: http.IncomingMessage): string {
+export function getRequestHost(req: http.IncomingMessage): string {
   const authority = (req.headers as Record<string, string>)["host"] || "";
   return authority.split(":")[0];
 }
@@ -78,7 +78,7 @@ function isEncrypted(req: http.IncomingMessage): boolean {
   return !!(req.socket as net.Socket & { encrypted?: boolean }).encrypted;
 }
 
-function findRoute(
+export function findRoute(
   routes: RouteInfo[],
   host: string,
   strict?: boolean,
@@ -93,11 +93,13 @@ function findRoute(
   );
 }
 
-function buildForwardedHeaders(req: http.IncomingMessage): Record<string, string> {
+export function buildForwardedHeaders(req: http.IncomingMessage): Record<string, string> {
   const tls = isEncrypted(req);
   const remoteAddress = req.socket.remoteAddress || "127.0.0.1";
   const proto = tls ? "https" : "http";
   const host = getRequestHost(req);
+  const rawHost = (req.headers as Record<string, string>)["host"] || "";
+  const portFromHost = rawHost.includes(":") ? rawHost.split(":").pop() : undefined;
   const defaultPort = tls ? "443" : "80";
 
   return {
@@ -107,7 +109,7 @@ function buildForwardedHeaders(req: http.IncomingMessage): Record<string, string
     "x-forwarded-proto": (req.headers["x-forwarded-proto"] as string) || proto,
     "x-forwarded-host": (req.headers["x-forwarded-host"] as string) || host,
     "x-forwarded-port":
-      (req.headers["x-forwarded-port"] as string) || host.split(":")[1] || defaultPort,
+      (req.headers["x-forwarded-port"] as string) || portFromHost || defaultPort,
   };
 }
 

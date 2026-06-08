@@ -6,6 +6,7 @@
   "description": "Tube proxy engine — HTTPS/HTTP2 proxy + traffic recorder + WebSocket API",
   "scripts": {
     "dev": "bun run src/index.ts",
+    "test": "bun test",
     "build": "bun build --compile --target=bun-darwin-arm64 ./src/index.ts --outfile=../dist/tube-engine",
     "build:linux": "bun build --compile --target=bun-linux-x64 ./src/index.ts --outfile=../dist/tube-engine",
     "build:win": "bun build --compile --target=bun-windows-x64 ./src/index.ts --outfile=../dist/tube-engine.exe"

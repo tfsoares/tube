@@ -7,6 +7,10 @@
 [tools]
 bun = "latest"
 
+[tasks.test]
+description = "Run engine tests"
+run = "cd engine && bun test"
+
 [tasks.engine]
 description = "Build the Bun-compiled proxy engine (CLI + daemon)"
 run = '''
