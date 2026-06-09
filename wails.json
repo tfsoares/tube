@@ -1,0 +1,9 @@
+{
+  "name": "Tube.app",
+  "outputfilename": "Tube",
+  "frontend:install": "echo 'no npm needed'",
+  "frontend:build": "echo 'no build step'",
+  "frontend:dev:watcher": "echo 'no watcher'",
+  "frontend:dev:serverUrl": "",
+  "author": { "name": "Tube", "email": "" }
+}

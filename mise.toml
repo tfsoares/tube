@@ -6,13 +6,30 @@
 
 [tools]
 bun = "latest"
+go = "1.22"
 
 [tasks.test]
 description = "Run engine tests"
 run = "cd engine && bun test"
 
+[tasks.wails-dev]
+description = "Run Tube in dev mode (Wails + Go, hot reload)"
+run = "wails dev"
+
+[tasks.wails-build]
+description = "Build Tube.app (Wails + Go native)"
+run = "wails build -o dist/Tube.app/Contents/MacOS/Tube -platform darwin/arm64"
+
+[tasks.wails-release]
+description = "Build Tube.app release (optimised)"
+run = "wails build -platform darwin/arm64 -clean -ldflags=\"-s -w\""
+
+[tasks.all]
+description = "Build Wails .app bundle"
+depends = ["wails-build"]
+
 [tasks.engine]
-description = "Build the Bun-compiled proxy engine (CLI + daemon)"
+description = "Build the Bun-compiled proxy engine (CLI + daemon) [legacy]"
 run = '''
 cd engine && bun install && bun build --compile \
   --target=bun-darwin-arm64 \
@@ -22,11 +39,11 @@ ln -sf tube-engine ../dist/tube
 '''
 
 [tasks.app]
-description = "Build the PerryTS native UI app"
+description = "Build the PerryTS native UI app [legacy]"
 run = "cd app && npx @perryts/perry compile src/main.ts"
 
 [tasks.bundle]
-description = "Package everything into a .app bundle"
+description = "Package legacy app bundle [legacy]"
 depends = ["engine", "app"]
 run = '''
 APP_NAME="Tube"
@@ -39,9 +56,10 @@ sed -e "s/__APP_NAME__/${APP_NAME}/g" -e "s/__BUNDLE_ID__/dev.tube.app/g" \
   app/src/Info.plist.in > "$BUNDLE_DIR/Contents/Info.plist"
 '''
 
-[tasks.all]
-description = "Build everything (engine + app + bundle)"
-depends = ["engine", "app", "bundle"]
+[tasks.run]
+description = "Build Wails app and open"
+depends = ["wails-build"]
+run = "open dist/Tube.app"
 
 [tasks.install-cli]
 description = "Install tube CLI to ~/.local/bin"
@@ -53,17 +71,11 @@ echo "Installed to ~/.local/bin/tube" && \
 echo "Add to PATH: export PATH=\"\$HOME/.local/bin:\$PATH\""
 '''
 
-[tasks.clean]
-description = "Remove build artifacts"
-run = "rm -rf dist app/main app/dist app/.perry-cache engine/dist engine/node_modules engine/bun.lock"
-
-[tasks.run]
-description = "Build and open the app"
-depends = ["bundle"]
-env = { TUBE_NO_TLS = "1" }
-run = "open dist/Tube.app"
-
 [tasks.dev-engine]
 description = "Run engine in development mode (no TLS)"
 env = { TUBE_NO_TLS = "1", TUBE_PORT = "8099", TUBE_API_PORT = "8100" }
 run = "cd engine && bun run src/index.ts"
+
+[tasks.clean]
+description = "Remove build artifacts"
+run = "rm -rf dist app/main app/dist app/.perry-cache engine/dist engine/node_modules engine/bun.lock build"

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tube</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div id="app">
+  <!-- Status bar -->
+  <div id="statusbar">
+    <span id="status-text">Engine: starting…</span>
+    <span class="spacer"></span>
+    <span id="status-traffic">0 requests</span>
+  </div>
+
+  <!-- Main layout -->
+  <div id="main-layout">
+    <!-- Sidebar -->
+    <div id="sidebar">
+      <div class="section">
+        <div class="section-header">
+          <span>Routes</span>
+          <button id="btn-refresh" onclick="refresh()" class="btn-sm">Refresh</button>
+        </div>
+        <div id="routes-list" class="list"></div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="section">
+        <div class="section-header">
+          <span>Tunnels</span>
+        </div>
+        <div id="tunnels-list" class="list"></div>
+        <div class="tunnel-controls">
+          <button onclick="toggleTunnel('ngrok')" id="btn-ngrok" class="btn-tunnel">ngrok</button>
+          <button onclick="toggleTunnel('tailscale')" id="btn-tailscale" class="btn-tunnel">tailscale</button>
+          <button onclick="toggleTunnel('funnel')" id="btn-funnel" class="btn-tunnel">cloudflare</button>
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+    </div>
+
+    <!-- Main content -->
+    <div id="main-content">
+      <div class="section">
+        <div class="section-header">
+          <span>Traffic Inspector</span>
+          <button id="btn-clear" onclick="clearTraffic()" class="btn-sm">Clear</button>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Traffic table -->
+      <div id="traffic-table-wrapper">
+        <table id="traffic-table">
+          <thead>
+            <tr>
+              <th class="col-method">Method</th>
+              <th class="col-path">Path</th>
+              <th class="col-status">Status</th>
+              <th class="col-duration">Duration</th>
+            </tr>
+          </thead>
+          <tbody id="traffic-tbody"></tbody>
+        </table>
+        <div id="traffic-empty" class="empty-state">Waiting for traffic…</div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Detail panel -->
+      <div id="detail-panel" class="detail-panel">
+        <div class="empty-state">Select a request to inspect</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/main.js"></script>
+</body>
+</html>
