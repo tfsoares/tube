@@ -103,6 +103,95 @@ func RouteFilePath() string {
 	return filepath.Join(dir, "routes.json")
 }
 
+// StateDirPath returns the default state directory path.
+func StateDirPath() string {
+	home, _ := os.UserHomeDir()
+	dir := os.Getenv("TUBE_STATE_DIR")
+	if dir == "" {
+		dir = filepath.Join(home, ".tube")
+	}
+	return dir
+}
+
+// RouteEntry is the raw on-disk route format (with PID).
+type RouteEntry struct {
+	Hostname string `json:"hostname"`
+	Port     int    `json:"port"`
+	PID      int    `json:"pid"`
+}
+
+// ReadRouteFile reads all routes from routes.json.
+func ReadRouteFile(path string) ([]RouteEntry, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	var routes []RouteEntry
+	if err := json.Unmarshal(data, &routes); err != nil {
+		return nil, err
+	}
+	return routes, nil
+}
+
+// WriteRouteFile writes routes to routes.json, ensuring the parent dir exists.
+func WriteRouteFile(path string, routes []RouteEntry) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return err
+	}
+	data, err := json.MarshalIndent(routes, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0644)
+}
+
+// RegisterRoute adds or updates a route entry, removing any existing entry
+// with the same hostname. Returns the PID of the replaced entry if any.
+func RegisterRoute(path, hostname string, port, pid int) (int, error) {
+	routes, err := ReadRouteFile(path)
+	if err != nil {
+		return 0, err
+	}
+
+	var oldPID int
+	filtered := make([]RouteEntry, 0, len(routes))
+	for _, r := range routes {
+		if r.Hostname == hostname {
+			oldPID = r.PID
+		} else {
+			filtered = append(filtered, r)
+		}
+	}
+
+	filtered = append(filtered, RouteEntry{
+		Hostname: hostname,
+		Port:     port,
+		PID:      pid,
+	})
+
+	return oldPID, WriteRouteFile(path, filtered)
+}
+
+// UnregisterRoute removes a route entry by hostname.
+func UnregisterRoute(path, hostname string) error {
+	routes, err := ReadRouteFile(path)
+	if err != nil {
+		return err
+	}
+
+	filtered := make([]RouteEntry, 0, len(routes))
+	for _, r := range routes {
+		if r.Hostname != hostname {
+			filtered = append(filtered, r)
+		}
+	}
+
+	return WriteRouteFile(path, filtered)
+}
+
 func (s *RouteStore) poll() {
 	data, err := os.ReadFile(s.path)
 	if err != nil {

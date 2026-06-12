@@ -24,6 +24,20 @@ run = "wails build -o dist/Tube.app/Contents/MacOS/Tube -platform darwin/arm64"
 description = "Build Tube.app release (optimised)"
 run = "wails build -platform darwin/arm64 -clean -ldflags=\"-s -w\""
 
+[tasks.cli]
+description = "Build the tube CLI (Go)"
+run = "go build -ldflags=\"-s -w\" -o dist/tube ./cmd/tube"
+
+[tasks.install-cli]
+description = "Install tube CLI to ~/.local/bin"
+depends = ["cli"]
+run = '''
+mkdir -p ~/.local/bin && \
+cp dist/tube ~/.local/bin/tube && \
+chmod +x ~/.local/bin/tube && \
+echo "Installed to ~/.local/bin/tube"
+'''
+
 [tasks.all]
 description = "Build Wails .app bundle"
 depends = ["wails-build"]

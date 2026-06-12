@@ -16,7 +16,7 @@ APP_NAME    := Tube
 DIST_DIR    := dist
 BUNDLE_DIR  := $(DIST_DIR)/$(APP_NAME).app
 
-.PHONY: all wails-dev wails-build wails-release engine app bundle clean
+.PHONY: all wails-dev wails-build wails-release engine app bundle clean run install cli
 
 # ─── Wails 2 + Go (primary) ──────────────────────────────────────────────────
 
@@ -35,6 +35,21 @@ wails-build:
 wails-release:
 	@echo "==> Building Tube.app release (optimised)…"
 	wails build -platform darwin/arm64 -clean -ldflags="-s -w"
+
+# ─── CLI (Go — single binary) ────────────────────────────────────────────────
+
+cli:
+	@echo "==> Building tube CLI (Go)..."
+	go build -ldflags="-s -w" -o dist/tube ./cmd/tube
+	@echo "==> CLI done: dist/tube"
+	ls -lh dist/tube
+
+install: cli
+	@echo "==> Installing tube CLI to ~/.local/bin..."
+	mkdir -p ~/.local/bin
+	cp dist/tube ~/.local/bin/tube
+	chmod +x ~/.local/bin/tube
+	@echo "Installed to ~/.local/bin/tube"
 
 # ─── Engine (Bun — legacy) ───────────────────────────────────────────────────
 
