@@ -38,6 +38,8 @@ func main() {
 		cmdList()
 	case "proxy":
 		cmdProxy(args[1:])
+	case "hosts":
+		cmdHosts(args[1:])
 	case "--help", "-h":
 		printHelp()
 	default:
@@ -60,6 +62,8 @@ Usage:
   tube                                Launch interactive TUI (terminal UI)
   tube <name> <command> [args...]    Run a dev server through the proxy
   tube list                          Show active routes
+  tube hosts sync                    Write route hostnames to /etc/hosts
+  tube hosts clean                   Remove Tube entries from /etc/hosts
   tube proxy start                   Start the proxy daemon
   tube proxy stop                    Stop the proxy daemon
   tube proxy status                  Show proxy status
@@ -294,7 +298,37 @@ func cmdProxyStatus() {
 	}
 }
 
-// ─── Daemon mode ────────────────────────────────────────────────────────────
+// ─── CLI: Hosts commands ───────────────────────────────────────────────────
+
+func cmdHosts(sub []string) {
+	if len(sub) == 0 || sub[0] == "sync" {
+		routes, err := proxy.ReadRouteFile(routesPath())
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "[tube] Read routes: %v\n", err)
+			os.Exit(1)
+		}
+		info := make([]proxy.RouteInfo, len(routes))
+		for i, r := range routes {
+			info[i] = proxy.RouteInfo{Hostname: r.Hostname, Port: r.Port}
+		}
+		if err := proxy.SyncHosts(info); err != nil {
+			fmt.Fprintf(os.Stderr, "[tube] %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println("Hosts synced.")
+		return
+	}
+	if sub[0] == "clean" {
+		if err := proxy.CleanHosts(); err != nil {
+			fmt.Fprintf(os.Stderr, "[tube] Clean hosts: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println("Hosts cleaned.")
+		return
+	}
+	fmt.Fprintln(os.Stderr, "Usage: tube hosts sync|clean")
+	os.Exit(1)
+}
 
 func runDaemon() {
 	tld, stateDir := config()
@@ -317,8 +351,16 @@ func runDaemon() {
 
 	// Start the proxy server
 	store := proxy.NewRouteStore(routesPath(), tld)
+	store.SetOnChange(func(routes []proxy.RouteInfo) {
+		if err := proxy.SyncHosts(routes); err != nil {
+			fmt.Fprintf(os.Stderr, "[tube] %v\n", err)
+		}
+	})
 	store.Start()
-	defer store.Stop()
+	defer func() {
+		store.Stop()
+		proxy.CleanHosts()
+	}()
 
 	recorder := proxy.NewRecorder(500)
 

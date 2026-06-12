@@ -128,6 +128,7 @@ func (m *TuiModel) Init() tea.Cmd {
 	m.routes.Start()
 	m.routes.SetOnChange(func(routes []proxy.RouteInfo) {
 		m.routeList = routes
+		proxy.SyncHosts(routes)
 	})
 
 	// Tunnel status updates

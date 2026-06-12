@@ -62,6 +62,10 @@ func (a *App) startup(ctx context.Context) {
 	// Push route changes
 	a.routes.SetOnChange(func(routes []proxy.RouteInfo) {
 		runtime.EventsEmit(ctx, "routes-changed", routes)
+		// Sync /etc/hosts so custom TLDs resolve
+		if err := proxy.SyncHosts(routes); err != nil {
+			fmt.Fprintf(os.Stderr, "[tube] hosts sync: %v\n", err)
+		}
 	})
 
 	// Push tunnel status changes
@@ -107,6 +111,7 @@ func (a *App) shutdown(ctx context.Context) {
 	if a.routes != nil {
 		a.routes.Stop()
 	}
+	proxy.CleanHosts()
 }
 
 // ─── Exposed methods (callable from frontend JS) ──────────────────────────
