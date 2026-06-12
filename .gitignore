@@ -24,3 +24,4 @@ Thumbs.db
 
 # State (generated at runtime)
 .tube/
+.perry-cache/
