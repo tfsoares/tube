@@ -1,191 +1,154 @@
-# Tube — Native macOS menubar app for named localhost URLs
+# Tube — AI Agent Instructions
 
-Tube is a native macOS menubar app for named localhost URLs, traffic inspection,
-and public tunnels. It combines a Bun-compiled proxy engine with a
-native UI (PerryTS) using the tray API for the menubar icon.
+Tube is a native macOS app for named localhost URLs, traffic inspection, and
+public tunnels. Built with **Wails 2 + Go** — single binary, no runtime dependencies.
 
 ## Architecture
 
-```
-Tube.app/
-├── Contents/
-│   ├── MacOS/
-│   │   └── Tube         ← PerryTS native UI app (9 MB)
-│   ├── Resources/
-│   │   └── tube-engine  ← Bun-compiled proxy engine (61 MB)
-│   └── Info.plist
-```
-
-### Two Components
-
-| Component | Language | Compiler | Size | Role |
-|---|---|---|---|---|
-| **UI** (`app/`) | TypeScript + `perry/ui` | PerryTS (SWC+LLVM) | 9 MB | Native macOS window + tray menubar icon (NSStatusItem) |
-| **Engine** (`engine/`) | TypeScript | Bun `build --compile` | 61 MB | HTTPS/HTTP2 proxy, traffic recorder, TLS cert generation, WebSocket API |
-
-### Communication
-
-```
-┌─────────────┐   WebSocket    ┌──────────────────────┐
-│  PerryTS    │ ◄────────────► │  Bun Engine           │
-│  UI App     │  ws://:PORT    │  • Proxy (:443)       │
-│  (9 MB)     │   /api         │  • Recorder            │
-│  + tray     │                │  • TLS cert generation │
-└─────────────┘                │  • WebSocket API       │
-      │                        └──────────────────────┘
-      │ spawns as child process
-      │ reads TUBE_API_PORT from stdout
-      ▼
-  trayCreate → NSStatusItem (menubar icon)
-```
-
-## Directory Structure
+Single Go module (`tube`) with three entry points sharing the `proxy/` packages:
 
 ```
 tube/
-├── README.md                 ← Public-facing docs
-├── AGENTS.md                 ← This file (AI agent instructions)
-├── Makefile                  ← Build system (fallback)
-├── mise.toml                 ← Build system (primary, `mise run <task>`)
-├── portline-vs-portless.md   ← Original analysis
-├── dist/                     ← Build output
-│   ├── Tube.app/             ← macOS .app bundle
-│   ├── tube-engine           ← Engine binary
-│   └── tube                  ← Symlink to tube-engine
-├── engine/                   ← Bun-compiled engine
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── src/
-│       ├── index.ts          ← Entry: CLI parsing + daemon startup
-│       ├── proxy.ts          ← Custom HTTPS/HTTP2 proxy with recording hooks
-│       ├── recorder.ts       ← Traffic ring buffer (1000 entries) + EventEmitter
-│       ├── api.ts            ← WebSocket API protocol (commands + events)
-│       ├── certs.ts          ← TLS CA + server cert generation via openssl
-│       ├── tunnel.ts         ← Public tunnel support (ngrok, tailscale, cloudflared)
-└── app/                      ← PerryTS native UI app
-    ├── perry.toml
-    ├── .perry/               ← PerryTS type stubs
-    └── src/
-        ├── main.ts           ← Entry: UI layout + tray + engine lifecycle
-        └── Info.plist.in     ← macOS app bundle template
+├── main.go              ← Wails GUI entry (macOS .app)
+├── app.go               ← App struct, frontend bindings
+├── cmd/tube/main.go     ← CLI entry (tube <name> <command>)
+├── proxy/               ← Shared engine (CLI + GUI both use this)
+│   ├── server.go        ← HTTPS reverse proxy (httputil.ReverseProxy)
+│   ├── certs.go         ← TLS generation (crypto/x509, no openssl)
+│   ├── recorder.go      ← Ring buffer, thread-safe
+│   ├── routes.go        ← Route file polling + read/write helpers
+│   ├── tunnel.go        ← Tunnel spawning via os/exec
+│   └── ports.go         ← FindFreePort, IsPIDAlive
+├── frontend/            ← Web UI (embedded in Wails binary via //go:embed)
+│   ├── index.html       ← Layout template
+│   ├── main.js          ← Wails bindings + event listeners
+│   └── style.css        ← Dark theme styles
+├── wails.json           ← Wails project config
+├── go.mod / go.sum      ← Go module dependencies
+├── Makefile             ← Build targets
+├── mise.toml            ← mise task runner config
+├── engine/              ← Legacy Bun engine (TypeScript, not the active codebase)
+│   └── src/             ← index.ts, proxy.ts, recorder.ts, api.ts, certs.ts, tunnel.ts
+└── app/                 ← Legacy PerryTS UI (not the active codebase)
+    └── src/             ← main.ts
 ```
 
-## Engine (Bun)
+## Key Files (active codebase — Go)
 
-Single binary with dual mode:
+| File | Lines | What it does |
+|---|---|---|
+| `main.go` | ~65 | Wails app entry: window config, asset embed, tray, bindings |
+| `app.go` | ~200 | `App` struct with methods exposed to frontend: `GetStatus`, `GetRoutes`, `GetTraffic`, `StartTunnel`, `StopTunnel`, `ClearTraffic` |
+| `cmd/tube/main.go` | ~250 | CLI: arg parsing, `runApp` (spawn + route register), `cmdList`, `cmdProxy`, `runDaemon` |
+| `proxy/server.go` | ~160 | `StartServer`: creates HTTPS/HTTP proxy, `captureResponseWriter` for recording |
+| `proxy/certs.go` | ~230 | `LoadOrGenerateCerts`, `SNICallback`, `TrustCA`, CA + server + host cert generation |
+| `proxy/recorder.go` | ~80 | `Recorder` struct: ring buffer, `Record`, `All`, `Count`, `SetListener` |
+| `proxy/routes.go` | ~230 | `RouteStore` (polling), `RegisterRoute`, `UnregisterRoute`, `ReadRouteFile`, `WriteRouteFile` |
+| `proxy/tunnel.go` | ~140 | `TunnelManager`: spawn ngrok/tailscale/cloudflared, parse URLs from stdout |
+| `proxy/ports.go` | ~24 | `FindFreePort`, `IsPIDAlive` |
 
-- **CLI mode:** `tube <name> <command>` — runs a dev server through the proxy
-- **Daemon mode:** `tube --daemon` — proxy + WebSocket API for GUI
+## Frontend ↔ Backend Communication
 
-State lives in `~/.tube/` (overridable via `TUBE_STATE_DIR`). Routes are written to `~/.tube/routes.json` and polled every 3s.
+**No WebSocket.** Wails provides direct Go ↔ JS bindings:
 
-### Custom TLD
+### Frontend calls Go (JS → Go)
+```js
+const status = await window.go.main.App.GetStatus()
+await window.go.main.App.StartTunnel("ngrok")
+```
 
-Set `TUBE_TLD` to any string (defaults to `localhost`):
+### Go pushes events (Go → JS)
+```go
+runtime.EventsEmit(ctx, "traffic", captureEntry)
+runtime.EventsEmit(ctx, "routes-changed", routes)
+runtime.EventsEmit(ctx, "tunnel-changed", status)
+```
+
+### Frontend subscribes to events
+```js
+window.runtime.EventsOn("traffic", (entry) => { /* ... */ })
+```
+
+**Rule:** Any new Go method you add to `App` that starts with a capital letter is
+automatically callable from the frontend. Return types must be serializable (struct,
+map, slice, string, int, bool).
+
+## Conventions
+
+- **Go code style:** Standard Go conventions (`gofmt`, `go vet`). Exported names use `PascalCase`.
+- **Error handling:** Return errors from functions, log non-fatal errors to stderr with `[tube]` prefix.
+- **State directory:** `~/.tube/` by default, overridable via `TUBE_STATE_DIR` env var.
+- **Routes file:** `~/.tube/routes.json` — array of `{hostname, port, pid}`. Polled every 3s.
+- **Cert directory:** `~/.tube/ca/` — PEM files. Generated on first proxy start.
+- **Config:** All runtime config via `os.Getenv`. No config files (except routes.json).
+- **Thread safety:** `Recorder` and `RouteStore` use `sync.RWMutex`. `TunnelManager` uses `sync.Mutex`.
+
+## Build Commands
 
 ```bash
-TUBE_TLD=test tube myapp next dev  # https://myapp.test
+# CLI (single Go binary, ~8 MB)
+make cli                    # → dist/tube
+go build -ldflags="-s -w" -o dist/tube ./cmd/tube
+
+# GUI app (Wails, ~15-20 MB .app bundle)
+make wails-build            # → dist/Tube.app
+wails build -o dist/Tube.app/Contents/MacOS/Tube -platform darwin/arm64
+
+# Hot-reload dev mode
+make wails-dev              # → opens window, auto-reloads on file change
+wails dev
+
+# Run the CLI directly (no build)
+go run ./cmd/tube myapp next dev
+
+# Run CLI daemon
+go run ./cmd/tube --daemon
+
+# Install CLI globally
+make install                # → ~/.local/bin/tube
 ```
 
-The TLD suffix is enforced in route matching via `proxy.ts:findRoute()` — only hosts ending with `.${tld}` are routed.
+## Testing
 
-### TLS Certificates
-
-On first run, the engine generates a self-signed CA and server certs using system `openssl` (`certs.ts`):
-
-```
-~/.tube/ca/
-├── ca-key.pem              ← EC key (prime256v1)
-├── ca.pem                  ← Self-signed CA cert (10yr, /CN=Tube Local CA)
-├── server-key.pem          ← EC key for server
-├── server.pem              ← Wildcard server cert (SAN: *.localhost, *.test, etc.)
-├── ca.srl                  ← Serial number tracking
-└── host-certs/             ← Per-hostname SNI certs (generated on-demand)
-```
-
-- `loadCerts(tld)` — loads or generates certs at daemon startup
-- `createSNICallback(tld)` — returns an SNI callback that lazily generates per-hostname certs cached in `host-certs/`
-- `trustCA()` — attempts auto-trust via `security add-trusted-cert` (login keychain, no sudo)
-- If `openssl` is missing, TLS falls back to disabled (HTTP only)
-
-### Public Tunnels
-
-Tube can spawn external tunnel processes via `tunnel.ts`:
-
-- **ngrok** → `ngrok http <port>` — parses `.ngrok-free.app` URL from stdout
-- **Tailscale Funnel** → `tailscale funnel --bg <port>` — public internet via Tailscale
-- **Cloudflare Tunnel** → `cloudflared tunnel --url ...` — `.trycloudflare.com` URLs
-
-Tunnels are toggled via the `start-tunnel` / `stop-tunnel` WebSocket commands and report URLs asynchronously. The UI tunnel section updates reactively.
-
-### WebSocket API
-
-Commands (UI → Engine):
-- `get-status` — Full engine status (tld, routes, tunnels, traffic count, TLS, uptime)
-- `get-routes` — Active routes list
-- `get-traffic` — All buffered captures
-- `get-capture` / `get-capture-body` — Single capture detail
-- `replay` / `edit-replay` — Resend a captured request
-- `start-tunnel` / `stop-tunnel` — Toggle tunnels
-
-Events (Engine → UI):
-- `traffic` — New capture available (streamed in real-time)
-- `route-added` / `route-removed` — Route table changes
-
-## UI App (PerryTS)
-
-Native macOS app built with `perry/ui` (compiles to AppKit).
-
-Features:
-- **Tray icon** via `trayCreate()` → `NSStatusItem` in the menubar
-- **Split view** window: sidebar (routes + tunnels) | main (traffic inspector)
-- **Table widget** (`NSTableView`) for traffic capture listing — method, path, status, duration
-- **Detail panel** below table showing selected capture info
-- **Status bar** at top showing engine connection state
-- **Reactive text** elements updated via `textSetString()` on WebSocket events
-- **No dock icon** (`activationPolicy: "accessory"`)
-- **Context menu** on tray icon with status, routes, quit
-
-## Build
+Tests live in `engine/src/__tests__/` (Bun test runner, for the legacy TypeScript engine
+only). The Go packages don't have tests yet. To add Go tests:
 
 ```bash
-# Using mise (recommended)
-mise run engine         # Bun compile → dist/tube-engine + dist/tube symlink
-mise run app            # PerryTS compile → app/main
-mise run bundle         # Package into .app
-mise run all            # engine + app + bundle
-mise run run            # Build + open app
-mise run install-cli    # Install tube CLI to ~/.local/bin
-mise run dev-engine     # Run engine in dev mode (no TLS, port 8099)
-
-# Using make (fallback)
-make engine
-make app
-make bundle
-make all
+# Create test files alongside source (Go convention)
+touch proxy/server_test.go
+go test ./proxy/... -v
 ```
-
-## Dependencies
-
-- **Bun** — runtime and compiler for the engine binary
-- **PerryTS** — TypeScript-to-native compiler for the UI
-- **openssl** — TLS certificate generation (ships with macOS)
-- **ws** (npm) — WebSocket implementation (native in Perry/Bun)
 
 ## Environment Variables
 
-| Variable | Default | Description |
+| Variable | Default | Where used |
 |---|---|---|
-| `TUBE_TLD` | `localhost` | TLD for named URLs |
-| `TUBE_PORT` | `443` | Proxy port |
-| `TUBE_API_PORT` | `0` (random) | WebSocket API port |
-| `TUBE_NO_TLS` | unset | Set to `1` to disable TLS |
-| `TUBE_STATE_DIR` | `~/.tube` | State directory |
+| `TUBE_TLD` | `localhost` | `proxy/routes.go:FindRoute()`, `cmd/tube:runApp()` |
+| `TUBE_PORT` | `443` | `proxy/server.go:StartServer()`, `cmd/tube:runDaemon()` |
+| `TUBE_NO_TLS` | unset | `proxy/server.go` (disables TLS if `"1"`) |
+| `TUBE_STATE_DIR` | `~/.tube` | `proxy/routes.go:RouteFilePath()` |
 
-## Known Issues / TODOs
+## How To Add a Feature
 
-1. PerryTS `ws` module types are `any` — need proper type definitions
-2. Engine binary is 61 MB (includes Bun runtime) — could be optimized later
-3. No code signing yet — runs fine locally but needs `--deep` signing for distribution
-4. Perry `strip-dedup` has non-fatal permission warning during build
-5. Tray icon uses default placeholder — needs a proper app icon PNG/icns
+1. **New proxy behavior** → Add to `proxy/` package. Both CLI and GUI pick it up automatically.
+2. **New frontend widget** → Add HTML to `frontend/index.html`, CSS to `style.css`, JS to `main.js`.
+3. **New frontend data source** → Add method to `App` in `app.go`. Call from `main.js`.
+4. **New CLI command** → Add case to `cmd/tube/main.go:main()` switch.
+5. **New tunnel provider** → Add case to `proxy/tunnel.go:StartTunnel()`, add URL pattern to `urlPatterns`.
+
+## Legacy Code
+
+The `engine/` and `app/` directories contain the original Bun + PerryTS implementation
+and are **not the active codebase**. They're kept for reference only. All active
+development happens in `cmd/`, `proxy/`, `frontend/`, `main.go`, and `app.go`.
+
+The legacy TypeScript engine has 54 unit tests in `engine/src/__tests__/`. They test `findRoute`,
+`TrafficRecorder`, and `extractUrl` logic that has equivalent implementations in the Go `proxy/` package.
+
+## Known Gaps
+
+1. **No Go tests yet** — The proxy logic needs test coverage mirroring the TypeScript tests
+2. **No menubar tray icon** — Wails tray API wired but needs an app icon PNG
+3. **No edit & replay** — Engine records request/response bodies but UI has no edit+resend controls
+4. **No code signing** — Builds and runs locally, needs signing for distribution
+5. **Subdomain matching** — Only exact hostname matches; loose `.sub.app.localhost` routing is planned
