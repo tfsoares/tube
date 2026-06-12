@@ -246,3 +246,33 @@ body {
   word-break: break-all;
   margin-top: 2px;
 }
+
+/* ── Add app ──────────────────────────────────────────── */
+.add-app {
+  margin-top: 8px;
+  display: flex;
+  gap: 4px;
+}
+.input-sm {
+  font-size: 11px;
+  padding: 3px 6px;
+  background: #111115;
+  border: 1px solid #3a3a45;
+  border-radius: 4px;
+  color: #ccc;
+  width: 80px;
+}
+.input-sm:focus { outline: none; border-color: #40c057; }
+
+/* ── Route item actions ───────────────────────────────── */
+.route-item { display: flex; align-items: center; gap: 4px; }
+.route-item .remove-btn {
+  font-size: 10px;
+  padding: 0 4px;
+  background: transparent;
+  border: none;
+  color: #555;
+  cursor: pointer;
+  margin-left: auto;
+}
+.route-item .remove-btn:hover { color: #ff6b6b; }

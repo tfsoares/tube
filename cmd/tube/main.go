@@ -10,13 +10,26 @@ import (
 	"strings"
 	"syscall"
 	"tube/proxy"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func main() {
 	args := os.Args[1:]
 
-	if len(args) == 0 || args[0] == "--daemon" {
+	if len(args) == 0 {
+		// No args → launch interactive TUI
+		runTUI()
+		return
+	}
+
+	if args[0] == "--daemon" {
 		runDaemon()
+		return
+	}
+
+	if args[0] == "--tui" || args[0] == "tui" {
+		runTUI()
 		return
 	}
 
@@ -44,18 +57,19 @@ func printHelp() {
 Tube — named localhost URLs with traffic inspection
 
 Usage:
+  tube                                Launch interactive TUI (terminal UI)
   tube <name> <command> [args...]    Run a dev server through the proxy
   tube list                          Show active routes
   tube proxy start                   Start the proxy daemon
   tube proxy stop                    Stop the proxy daemon
   tube proxy status                  Show proxy status
-  tube --daemon                      Start in daemon mode
+  tube --daemon                      Start in headless daemon mode
   tube --help                        Show this help
 
 Examples:
+  tube                               Interactive TUI
   tube myapp next dev                https://myapp.localhost
   tube api pnpm start                https://api.localhost
-  tube web vite                      https://web.localhost
   TUBE_TLD=test tube myapp next dev  https://myapp.test
 
 Environment:
@@ -64,6 +78,18 @@ Environment:
   TUBE_NO_TLS   Disable TLS (set to 1)
   TUBE_STATE_DIR State directory (default: ~/.tube)
 `)
+}
+
+// ─── TUI mode ──────────────────────────────────────────────────────────────
+
+func runTUI() {
+	m := NewTuiModel()
+	p := tea.NewProgram(m, tea.WithAltScreen())
+
+	if _, err := p.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "[tube] TUI error: %v\n", err)
+		os.Exit(1)
+	}
 }
 
 // ─── Config ─────────────────────────────────────────────────────────────────

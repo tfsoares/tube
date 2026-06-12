@@ -3,9 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
+	"strings"
 	"syscall"
 	"tube/proxy"
 	"time"
@@ -164,6 +167,72 @@ func (a *App) StopTunnel(typ string) {
 // GetTunnelStatus returns the current tunnel state.
 func (a *App) GetTunnelStatus() proxy.TunnelStatus {
 	return a.tunnels.Status()
+}
+
+// StartApp spawns a dev server and registers the route. Returns the local URL.
+func (a *App) StartApp(name string, command string) (string, error) {
+	parts := strings.Fields(command)
+	if len(parts) == 0 {
+		return "", fmt.Errorf("command is required")
+	}
+
+	port := proxy.FindFreePort()
+	hostname := fmt.Sprintf("%s.%s", name, a.tld)
+
+	// Ensure state dir and routes file exist
+	stateDir := proxy.StateDirPath()
+	os.MkdirAll(stateDir, 0755)
+	rp := proxy.RouteFilePath()
+	if _, err := os.Stat(rp); os.IsNotExist(err) {
+		os.WriteFile(rp, []byte("[]"), 0644)
+	}
+
+	// Spawn dev server
+	child := exec.Command(parts[0], parts[1:]...)
+	child.Env = append(os.Environ(),
+		fmt.Sprintf("PORT=%d", port),
+		fmt.Sprintf("TUBE_URL=https://%s", hostname),
+		fmt.Sprintf("TUBE_NAME=%s", name),
+		"HOST=127.0.0.1",
+	)
+	// Discard output in GUI mode
+	child.Stdout = io.Discard
+	child.Stderr = io.Discard
+
+	if err := child.Start(); err != nil {
+		return "", fmt.Errorf("start %s: %w", name, err)
+	}
+
+	// Register route
+	proxy.RegisterRoute(rp, hostname, port, child.Process.Pid)
+
+	// Cleanup on exit
+	go func() {
+		child.Wait()
+		proxy.UnregisterRoute(rp, hostname)
+	}()
+
+	return fmt.Sprintf("https://%s", hostname), nil
+}
+
+// RemoveRoute unregisters a route by hostname.
+func (a *App) RemoveRoute(hostname string) error {
+	rp := proxy.RouteFilePath()
+	routes, err := proxy.ReadRouteFile(rp)
+	if err != nil {
+		return err
+	}
+
+	// Find and kill the process if still alive
+	for _, r := range routes {
+		if r.Hostname == hostname && r.PID > 0 {
+			if proc, err := os.FindProcess(r.PID); err == nil {
+				proc.Signal(syscall.SIGTERM)
+			}
+		}
+	}
+
+	return proxy.UnregisterRoute(rp, hostname)
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────

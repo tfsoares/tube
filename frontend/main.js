@@ -59,8 +59,33 @@ function renderRoutes(routes) {
     return;
   }
   el.innerHTML = routes.map(r =>
-    `<div class="list-item"><span class="dot"></span><span class="url">${esc(r.localUrl || 'https://' + r.hostname)}</span></div>`
+    `<div class="route-item"><span class="list-item" style="flex:1;margin:0;padding:2px 0"><span class="dot"></span><span class="url">${esc(r.localUrl || 'https://' + r.hostname)}</span></span><button class="remove-btn" onclick="removeRoute('${esc(r.hostname)}')" title="Remove">✕</button></div>`
   ).join('');
+}
+
+async function startApp() {
+  if (!Ready) return;
+  const name = document.getElementById('app-name').value.trim();
+  const cmd = document.getElementById('app-cmd').value.trim();
+  if (!name || !cmd) return;
+  try {
+    await App.StartApp(name, cmd);
+    document.getElementById('app-name').value = '';
+    document.getElementById('app-cmd').value = '';
+    setTimeout(refresh, 500);
+  } catch (e) {
+    console.error('startApp error:', e);
+  }
+}
+
+async function removeRoute(hostname) {
+  if (!Ready) return;
+  try {
+    await App.RemoveRoute(hostname);
+    setTimeout(refresh, 500);
+  } catch (e) {
+    console.error('removeRoute error:', e);
+  }
 }
 
 // ─── Traffic table ──────────────────────────────────────────────────────────
