@@ -30,7 +30,7 @@ wails-build:
 	@echo "==> Building Tube.app (Wails + Go)…"
 	wails build -o "$(BUNDLE_DIR)/Contents/MacOS/$(APP_NAME)" -platform darwin/arm64
 	@echo "==> Bundle created: $(BUNDLE_DIR)"
-	@du -sh "$(BUNDLE_DIR)"
+	@du -sh "$(BUNDLE_DIR)" 2>/dev/null || echo "  Built to build/bin/ (use wails build for default output)"
 
 wails-release:
 	@echo "==> Building Tube.app release (optimised)…"
@@ -107,7 +107,7 @@ bundle: engine app
 # ─── Run ─────────────────────────────────────────────────────────────────────
 
 run: wails-build
-	open "$(BUNDLE_DIR)"
+	open build/bin/Tube.app.app 2>/dev/null || open build/bin/Tube.app 2>/dev/null || echo "App built at build/bin/"
 
 # ─── Clean ───────────────────────────────────────────────────────────────────
 

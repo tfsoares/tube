@@ -93,9 +93,9 @@ func (m *TunnelManager) StartTunnel(typ TunnelType, port int) error {
 		for s.Scan() {
 			line := s.Text()
 			if pat, ok := urlPatterns[typ]; ok {
-				if m := pat.FindString(line); m != "" && m != entry.url {
-					entry.url = m
-					fmt.Fprintf(os.Stderr, "[tube] Tunnel %s: %s\n", typ, m)
+				if match := pat.FindString(line); match != "" && match != entry.url {
+					entry.url = match
+					fmt.Fprintf(os.Stderr, "[tube] Tunnel %s: %s\n", typ, match)
 					m.emit()
 				}
 			}
