@@ -11,9 +11,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"runtime"
 	"time"
 )
 
@@ -111,26 +109,21 @@ func SNICallback(tld string, paths CertPaths, caCert *tls.Certificate) func(*tls
 	}
 }
 
-// TrustCA attempts to trust the CA in the login keychain (macOS).
+// TrustCA attempts to trust the CA in the system trust store.
+// Implementation is platform-specific (certs_darwin.go, certs_linux.go, certs_windows.go).
 func TrustCA(paths CertPaths) {
 	trustMarker := filepath.Join(filepath.Dir(paths.CACert), ".trusted")
 	if fileExists(trustMarker) {
 		return
 	}
 
-	if runtime.GOOS == "darwin" {
-		home, _ := os.UserHomeDir()
-		keychain := filepath.Join(home, "Library", "Keychains", "login.keychain-db")
-		cmd := exec.Command("security", "add-trusted-cert", "-d", "-r", "trustRoot",
-			"-k", keychain, paths.CACert)
-		if err := cmd.Run(); err != nil {
-			fmt.Fprintf(os.Stderr, "[tube] Could not auto-trust CA — run manually:\n")
-			fmt.Fprintf(os.Stderr, "  security add-trusted-cert -d -r trustRoot -k %s %s\n", keychain, paths.CACert)
-		} else {
-			fmt.Fprintln(os.Stderr, "[tube] CA trusted in login keychain")
-		}
+	if err := trustCA(paths.CACert); err != nil {
+		fmt.Fprintf(os.Stderr, "[tube] Could not auto-trust CA: %v\n", err)
+		fmt.Fprintf(os.Stderr, "[tube] Add %s to your system trust store manually.\n", paths.CACert)
+		return
 	}
 
+	fmt.Fprintln(os.Stderr, "[tube] CA trusted in system keychain")
 	os.WriteFile(trustMarker, []byte("1"), 0644)
 }
 

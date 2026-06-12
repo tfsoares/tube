@@ -16,7 +16,7 @@ APP_NAME    := Tube
 DIST_DIR    := dist
 BUNDLE_DIR  := $(DIST_DIR)/$(APP_NAME).app
 
-.PHONY: all wails-dev wails-build wails-release engine app bundle clean run install cli
+.PHONY: all wails-dev wails-build wails-release wails-build-linux wails-build-windows engine app bundle clean run install cli cli-linux cli-windows
 
 # ─── Wails 2 + Go (primary) ──────────────────────────────────────────────────
 
@@ -36,13 +36,31 @@ wails-release:
 	@echo "==> Building Tube.app release (optimised)…"
 	wails build -platform darwin/arm64 -clean -ldflags="-s -w"
 
+wails-build-linux:
+	@echo "==> Building Tube for Linux (amd64)…"
+	wails build -platform linux/amd64 -clean
+
+wails-build-windows:
+	@echo "==> Building Tube for Windows (amd64)…"
+	wails build -platform windows/amd64 -clean
+
 # ─── CLI (Go — single binary) ────────────────────────────────────────────────
 
 cli:
-	@echo "==> Building tube CLI (Go)..."
+	@echo "==> Building tube CLI (Go, native)…"
 	go build -ldflags="-s -w" -o dist/tube ./cmd/tube
 	@echo "==> CLI done: dist/tube"
 	ls -lh dist/tube
+
+cli-linux:
+	@echo "==> Building tube CLI for Linux…"
+	GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/tube-linux-amd64 ./cmd/tube
+	ls -lh dist/tube-linux-amd64
+
+cli-windows:
+	@echo "==> Building tube CLI for Windows…"
+	GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o dist/tube-windows-amd64.exe ./cmd/tube
+	ls -lh dist/tube-windows-amd64.exe
 
 install: cli
 	@echo "==> Installing tube CLI to ~/.local/bin..."

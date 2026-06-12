@@ -1,0 +1,182 @@
+{
+  "version": 1,
+  "perry_version": "0.5.1129",
+  "perry_build_id": {
+    "path": "/Users/tiagosoares/.hermes/node/lib/node_modules/@perryts/perry/node_modules/@perryts/perry-darwin-arm64/bin/perry",
+    "size": 27862528,
+    "sha256": "af19fbc57ec173b6267066478ad45d81d2be3fb3947113737a232578bcdbceda"
+  },
+  "args_key": "dd20f969e64de998f69b08e958c4707a3a66c4f8bf946d091ed3a88de979d163",
+  "env": [
+    {
+      "name": "PATH",
+      "value": "/Users/tiagosoares/.hermes/node/bin:/Users/tiagosoares/my-work/tube/engine/node_modules/.bin:/Users/tiagosoares/my-work/tube/node_modules/.bin:/Users/tiagosoares/my-work/node_modules/.bin:/Users/tiagosoares/node_modules/.bin:/Users/node_modules/.bin:/node_modules/.bin:/Users/tiagosoares/.hermes/node/lib/node_modules/npm/node_modules/@npmcli/run-script/lib/node-gyp-bin:/Users/tiagosoares/Library/pnpm/bin:/Users/tiagosoares/.bun/bin:/Users/tiagosoares/.opencode/bin:/Users/tiagosoares/.local/bin:/Users/tiagosoares/.local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/pkg/env/global/bin:/Users/tiagosoares/.lmstudio/bin"
+    },
+    {
+      "name": "LIB",
+      "value": null
+    },
+    {
+      "name": "LIBPATH",
+      "value": null
+    },
+    {
+      "name": "LIBRARY_PATH",
+      "value": null
+    },
+    {
+      "name": "LD_LIBRARY_PATH",
+      "value": null
+    },
+    {
+      "name": "DYLD_LIBRARY_PATH",
+      "value": null
+    },
+    {
+      "name": "SDKROOT",
+      "value": null
+    },
+    {
+      "name": "PKG_CONFIG_PATH",
+      "value": null
+    },
+    {
+      "name": "PKG_CONFIG_LIBDIR",
+      "value": null
+    },
+    {
+      "name": "PKG_CONFIG_SYSROOT_DIR",
+      "value": null
+    },
+    {
+      "name": "PERRY_LINUX_SYSROOT",
+      "value": null
+    },
+    {
+      "name": "PERRY_WINDOWS_SYSROOT",
+      "value": null
+    },
+    {
+      "name": "PERRY_IOS_SYSROOT",
+      "value": null
+    },
+    {
+      "name": "PERRY_MACOS_SYSROOT",
+      "value": null
+    },
+    {
+      "name": "PERRY_TVOS_SYSROOT",
+      "value": null
+    },
+    {
+      "name": "PERRY_VISIONOS_SYSROOT",
+      "value": null
+    },
+    {
+      "name": "ANDROID_NDK_HOME",
+      "value": null
+    },
+    {
+      "name": "OHOS_SDK_HOME",
+      "value": null
+    },
+    {
+      "name": "HARMONYOS_SDK_HOME",
+      "value": null
+    },
+    {
+      "name": "PERRY_DEBUG_INIT",
+      "value": null
+    },
+    {
+      "name": "PERRY_DEBUG_SYMBOLS",
+      "value": null
+    },
+    {
+      "name": "PERRY_LLVM_CLANG",
+      "value": null
+    },
+    {
+      "name": "PERRY_WRITE_BARRIERS",
+      "value": null
+    },
+    {
+      "name": "PERRY_SHADOW_STACK",
+      "value": null
+    },
+    {
+      "name": "PERRY_DISABLE_BUFFER_FAST_PATH",
+      "value": null
+    },
+    {
+      "name": "PERRY_VERIFY_NATIVE_REGIONS",
+      "value": null
+    },
+    {
+      "name": "PERRY_UNBOXED_OBJECT_FIELDS",
+      "value": null
+    },
+    {
+      "name": "PERRY_NO_AUTO_OPTIMIZE",
+      "value": null
+    },
+    {
+      "name": "PERRY_DISABLE_WELL_KNOWN",
+      "value": null
+    },
+    {
+      "name": "PERRY_FORCE_WELL_KNOWN",
+      "value": null
+    }
+  ],
+  "input_path": "/Users/tiagosoares/my-work/tube/engine/src/daemon-perry.ts",
+  "output_path": "/Users/tiagosoares/my-work/tube/dist/tube-proxy",
+  "target": "native",
+  "compiled_features": [],
+  "sources": [
+    {
+      "path": "/Users/tiagosoares/my-work/tube/engine/src/daemon-perry.ts",
+      "size": 11718,
+      "sha256": "172ee593f058b4d00dd9e0901b27b0d1466fa9b041c77ba30307715dfeeeb65f"
+    }
+  ],
+  "config_inputs": [
+    {
+      "path": "/Users/tiagosoares/my-work/tube/engine/package.json",
+      "size": 721,
+      "sha256": "39ab7427f23416bc9193195655b522eb62f3b3c56caab9754e07f66b8e5aa8a2"
+    },
+    {
+      "path": "/Users/tiagosoares/my-work/tube/engine/perry.toml",
+      "size": 100,
+      "sha256": "537b64d6cfbba74194e804722e6f846404b6b1c03b7cd2a893617444150e7423"
+    },
+    {
+      "path": "/Users/tiagosoares/my-work/tube/engine/tsconfig.json",
+      "size": 318,
+      "sha256": "1dd7187298326bf00cbee2199d1910638cb3f4dad1373e2e2cb6df422e500524"
+    }
+  ],
+  "runtime_inputs": [
+    {
+      "path": "/Users/tiagosoares/.hermes/node/lib/node_modules/@perryts/perry/node_modules/@perryts/perry-darwin-arm64/lib/libperry_runtime.a",
+      "size": 76618768,
+      "sha256": "fd5de343b0af45100dc628b1734b9c90db4256f61917f826327d6ca64fdbf414"
+    },
+    {
+      "path": "/Users/tiagosoares/.hermes/node/lib/node_modules/@perryts/perry/node_modules/@perryts/perry-darwin-arm64/lib/libperry_stdlib.a",
+      "size": 277717736,
+      "sha256": "217ead8116a494d48b7da6e9df8a513d2fe44ab7ec2e75bae1f5f1706855ffe5"
+    }
+  ],
+  "object_fingerprints": [
+    "cache:fa1c7daed56050c1"
+  ],
+  "native_modules": 1,
+  "js_modules": 0,
+  "output": {
+    "path": "/Users/tiagosoares/my-work/tube/dist/tube-proxy",
+    "size": 21029384,
+    "sha256": "710ab30394a262982e350a0d572b5bd56a9acfd557b48855d02d472bf851a603"
+  }
+}

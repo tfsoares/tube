@@ -4,16 +4,19 @@
 
 Tube gives every dev server a stable HTTPS URL (`https://myapp.localhost`, `https://api.test`)
 instead of `localhost:3000`. Built with **Wails 2 + Go** — single native binary, zero runtime
-dependencies.
+dependencies. Runs on **macOS, Linux, and Windows**.
 
 ## Quick Start
 
 ```bash
-# Install prerequisites (macOS)
-brew install go wails
+# Install prerequisites
+brew install go wails          # macOS
+# or: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
-# Build the CLI
-make cli            # → dist/tube (~8 MB)
+# Build the CLI (macOS/Linux/Windows)
+make cli                       # → dist/tube (~8 MB)
+GOOS=linux go build ./cmd/tube # cross-compile Linux
+GOOS=windows go build ./cmd/tube # cross-compile Windows
 
 # Run a dev server through the proxy
 dist/tube myapp next dev       # → https://myapp.localhost
@@ -31,11 +34,28 @@ open dist/Tube.app
 - **Automatic TLS** — Self-signed CA + wildcard certs generated in pure Go (`crypto/x509`), no `openssl` needed
 - **CA auto-trust** — Trusts the CA in your login keychain on first run (macOS)
 - **HTTP/2** — ALPN auto-negotiation via Go stdlib
+- **Cross-platform** — macOS, Linux, and Windows (native WebView2/GtkWebkit on each)
 - **Public tunnels** — Built-in ngrok, Tailscale Funnel, and Cloudflare Tunnel support
 - **Traffic inspector** — Dark-themed table view with method/path/status/duration + detail panel
-- **Native macOS app** — Wails WebView2 window, single ~15 MB binary
-- **CLI mode** — `tube <name> <command>` for terminal users
-- **Zero-config routing** — `tube myapp next dev` → proxy handles the rest
+- **Native macOS app** — Wails WebView2/GtkWebkit window, single binary per platform
+
+## CLI Usage
+
+```bash
+# Start a dev server (spawns <command>, registers route, sets PORT env)
+tube myapp next dev
+tube api pnpm start
+tube web vite
+
+# Daemon mode (proxy server + route polling)
+tube --daemon
+tube proxy start
+tube proxy stop
+tube proxy status
+
+# List active routes
+tube list
+```
 
 ## Architecture
 
@@ -108,11 +128,15 @@ On first run, Tube generates a CA and wildcard server cert via Go's `crypto/x509
 Requires: **Go 1.22+**, **Wails CLI** (`go install github.com/wailsapp/wails/v2/cmd/wails@latest`)
 
 ```bash
-make cli           # Build CLI → dist/tube (~8 MB)
-make wails-build   # Build GUI .app → dist/Tube.app (~15–20 MB)
-make wails-dev     # Run GUI in dev mode (hot reload)
-make install       # Build CLI + install to ~/.local/bin
-make clean         # Remove build artifacts
+make cli              # Build CLI → dist/tube (~8 MB)
+make cli-linux        # Cross-compile CLI for Linux
+make cli-windows      # Cross-compile CLI for Windows
+make wails-build      # Build GUI app for current platform
+make wails-build-linux  # Build GUI for Linux
+make wails-build-windows # Build GUI for Windows
+make wails-dev        # Run GUI in dev mode (hot reload)
+make install          # Build CLI + install to ~/.local/bin
+make clean            # Remove build artifacts
 ```
 
 ## Directory Structure
@@ -163,7 +187,10 @@ Tube generates all certificates on first run using **Go's `crypto/x509`** — no
     └── myapp.test-key.pem
 ```
 
-Auto-trust runs `security add-trusted-cert` on macOS (login keychain, no sudo).
+Auto-trust hooks into the platform's certificate store:
+- **macOS** — `security add-trusted-cert` (login keychain)
+- **Linux** — `update-ca-certificates` / `update-ca-trust` (system trust anchors)
+- **Windows** — `certutil -addstore -user Root`
 
 ## License
 

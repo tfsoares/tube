@@ -1,7 +1,7 @@
 # Tube — AI Agent Instructions
 
-Tube is a native macOS app for named localhost URLs, traffic inspection, and
-public tunnels. Built with **Wails 2 + Go** — single binary, no runtime dependencies.
+Tube is a native app for named localhost URLs, traffic inspection, and
+public tunnels. Built with **Wails 2 + Go** — single binary, runs on macOS, Linux, and Windows.
 
 ## Architecture
 
@@ -27,10 +27,6 @@ tube/
 ├── go.mod / go.sum      ← Go module dependencies
 ├── Makefile             ← Build targets
 ├── mise.toml            ← mise task runner config
-├── engine/              ← Legacy Bun engine (TypeScript, not the active codebase)
-│   └── src/             ← index.ts, proxy.ts, recorder.ts, api.ts, certs.ts, tunnel.ts
-└── app/                 ← Legacy PerryTS UI (not the active codebase)
-    └── src/             ← main.ts
 ```
 
 ## Key Files (active codebase — Go)
@@ -42,10 +38,15 @@ tube/
 | `cmd/tube/main.go` | ~250 | CLI: arg parsing, `runApp` (spawn + route register), `cmdList`, `cmdProxy`, `runDaemon` |
 | `proxy/server.go` | ~160 | `StartServer`: creates HTTPS/HTTP proxy, `captureResponseWriter` for recording |
 | `proxy/certs.go` | ~230 | `LoadOrGenerateCerts`, `SNICallback`, `TrustCA`, CA + server + host cert generation |
+| `proxy/certs_darwin.go` | ~20 | macOS CA trust via `security add-trusted-cert` |
+| `proxy/certs_linux.go` | ~50 | Linux CA trust via `update-ca-certificates` / `update-ca-trust` |
+| `proxy/certs_windows.go` | ~15 | Windows CA trust via `certutil -addstore` |
 | `proxy/recorder.go` | ~80 | `Recorder` struct: ring buffer, `Record`, `All`, `Count`, `SetListener` |
 | `proxy/routes.go` | ~230 | `RouteStore` (polling), `RegisterRoute`, `UnregisterRoute`, `ReadRouteFile`, `WriteRouteFile` |
 | `proxy/tunnel.go` | ~140 | `TunnelManager`: spawn ngrok/tailscale/cloudflared, parse URLs from stdout |
-| `proxy/ports.go` | ~24 | `FindFreePort`, `IsPIDAlive` |
+| `proxy/ports.go` | ~18 | `FindFreePort` |
+| `proxy/ports_unix.go` | ~15 | `IsPIDAlive` (Unix: signal check) |
+| `proxy/ports_windows.go` | ~15 | `IsPIDAlive` (Windows: OpenProcess) |
 
 ## Frontend ↔ Backend Communication
 
@@ -88,11 +89,14 @@ map, slice, string, int, bool).
 ```bash
 # CLI (single Go binary, ~8 MB)
 make cli                    # → dist/tube
+make cli-linux              # → dist/tube-linux-amd64 (cross-compile)
+make cli-windows            # → dist/tube-windows-amd64.exe (cross-compile)
 go build -ldflags="-s -w" -o dist/tube ./cmd/tube
 
-# GUI app (Wails, ~15-20 MB .app bundle)
-make wails-build            # → dist/Tube.app
-wails build -o dist/Tube.app/Contents/MacOS/Tube -platform darwin/arm64
+# GUI app (Wails, ~15-20 MB)
+make wails-build            # → dist/Tube.app (macOS)
+make wails-build-linux      # → build for Linux
+make wails-build-windows    # → build for Windows
 
 # Hot-reload dev mode
 make wails-dev              # → opens window, auto-reloads on file change
@@ -128,6 +132,18 @@ go test ./proxy/... -v
 | `TUBE_NO_TLS` | unset | `proxy/server.go` (disables TLS if `"1"`) |
 | `TUBE_STATE_DIR` | `~/.tube` | `proxy/routes.go:RouteFilePath()` |
 
+## Cross-Platform Design
+
+Platform-specific code uses Go build tags (`//go:build darwin`, `//go:build linux`, `//go:build windows`):
+
+| Feature | macOS | Linux | Windows |
+|---|---|---|---|
+| Wails native window | `main_darwin.go` (`mac.Options`) | `main_linux.go` (`linux.Options`) | `main_windows.go` (`windows.Options`) |
+| CA trust | `security add-trusted-cert` | `update-ca-certificates` | `certutil -addstore` |
+| PID check | `Signal(0)` | `Signal(0)` | `OpenProcess` |
+
+All shared code lives in `proxy/` and `cmd/tube/` with no platform conditionals.
+
 ## How To Add a Feature
 
 1. **New proxy behavior** → Add to `proxy/` package. Both CLI and GUI pick it up automatically.
@@ -148,7 +164,8 @@ The legacy TypeScript engine has 54 unit tests in `engine/src/__tests__/`. They 
 ## Known Gaps
 
 1. **No Go tests yet** — The proxy logic needs test coverage mirroring the TypeScript tests
-2. **No menubar tray icon** — Wails tray API wired but needs an app icon PNG
+2. **No menubar tray icon** — Wails tray API needs an app icon PNG
 3. **No edit & replay** — Engine records request/response bodies but UI has no edit+resend controls
 4. **No code signing** — Builds and runs locally, needs signing for distribution
 5. **Subdomain matching** — Only exact hostname matches; loose `.sub.app.localhost` routing is planned
+6. **Linux GtkWebKit dependency** — Wails on Linux requires WebKit2GTK (`libwebkit2gtk-4.0-dev`)

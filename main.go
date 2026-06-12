@@ -7,7 +7,6 @@ import (
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
-	"github.com/wailsapp/wails/v2/pkg/options/mac"
 )
 
 //go:embed frontend/*
@@ -16,7 +15,7 @@ var assets embed.FS
 func main() {
 	app := NewApp()
 
-	err := wails.Run(&options.App{
+	opts := &options.App{
 		Title:            "Tube",
 		Width:            1000,
 		Height:           650,
@@ -31,24 +30,16 @@ func main() {
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
-		Mac: &mac.Options{
-			TitleBar:             mac.TitleBarHiddenInset(),
-			Appearance:           mac.NSAppearanceNameDarkAqua,
-			WebviewIsTransparent: false,
-			WindowIsTranslucent:  false,
-			About: &mac.AboutInfo{
-				Title:   "Tube",
-				Message: "Named localhost URLs with traffic inspection",
-				Icon:    nil,
-			},
-		},
 		OnStartup:  app.startup,
 		OnShutdown: app.shutdown,
 		Bind: []any{
 			app,
 		},
-	})
+	}
 
+	setPlatformOptions(opts)
+
+	err := wails.Run(opts)
 	if err != nil {
 		log.Fatal(err)
 	}

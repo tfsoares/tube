@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "modules": [
+    {
+      "source": "/Users/tiagosoares/my-work/tube/engine/src/daemon-perry.ts",
+      "package": null,
+      "stdlib": {
+        "array": [
+          "push_single"
+        ],
+        "fastify": [
+          "all",
+          "default",
+          "listen",
+          "setNotFoundHandler"
+        ],
+        "fs": [
+          "existsSync",
+          "mkdirSync",
+          "readFile",
+          "readFileSync"
+        ],
+        "path": [
+          "join"
+        ],
+        "ws": [
+          "on"
+        ]
+      }
+    }
+  ]
+}
