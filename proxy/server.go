@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"bytes"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -40,9 +41,11 @@ func StartServer(cfg *ServerConfig) (*http.Server, *http.Server, error) {
 			return
 		}
 
-		// Read request body
-		reqBody, _ := io.ReadAll(r.Body)
+		// Read request body for recording, then restore it for the proxy
+		reqBodyBytes, _ := io.ReadAll(r.Body)
 		r.Body.Close()
+		r.Body = io.NopCloser(bytes.NewReader(reqBodyBytes))
+		r.ContentLength = int64(len(reqBodyBytes))
 
 		start := time.Now()
 
@@ -94,7 +97,7 @@ func StartServer(cfg *ServerConfig) (*http.Server, *http.Server, error) {
 		}
 
 		// Cap body sizes for the ring buffer
-		reqBodyStr := string(reqBody)
+		reqBodyStr := string(reqBodyBytes)
 		if len(reqBodyStr) > 5000 {
 			reqBodyStr = reqBodyStr[:5000]
 		}
@@ -202,15 +205,23 @@ func StartServer(cfg *ServerConfig) (*http.Server, *http.Server, error) {
 type captureResponseWriter struct {
 	http.ResponseWriter
 	statusCode int
-	body       strings.Builder
+	body       bytes.Buffer
+	wroteHeader bool
 }
 
 func (w *captureResponseWriter) WriteHeader(code int) {
-	w.statusCode = code
-	w.ResponseWriter.WriteHeader(code)
+	if !w.wroteHeader {
+		w.statusCode = code
+		w.wroteHeader = true
+		w.ResponseWriter.WriteHeader(code)
+	}
 }
 
 func (w *captureResponseWriter) Write(b []byte) (int, error) {
+	if !w.wroteHeader {
+		w.statusCode = http.StatusOK
+		w.wroteHeader = true
+	}
 	w.body.Write(b)
 	return w.ResponseWriter.Write(b)
 }
